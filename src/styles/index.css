@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #C2B280;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #8B7D3A;
+}
+
+/* Smooth Transitions */
+.page-transition {
+    transition: all 0.3s ease;
+}
+
+/* WhatsApp-like Chat Bubbles */
+.message-bubble-sent {
+    border-radius: 18px 4px 18px 18px;
+}
+
+.message-bubble-received {
+    border-radius: 4px 18px 18px 18px;
+}
+
+/* Global page background to match the app's off-white card background */
+html, body, #root {
+    height: 100%;
+}
+body {
+    margin: 0;
+    background-color: #F7F6F2; /* off-white */
+}

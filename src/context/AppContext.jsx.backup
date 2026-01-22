@@ -1,0 +1,157 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+const AppContext = createContext();
+
+// Environment variables configuration
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+const APP_NAME = process.env.REACT_APP_NAME || 'CorpsLink';
+const APP_DESCRIPTION = process.env.REACT_APP_DESCRIPTION || 'Connect with fellow NYSC corps members';
+
+console.log('Environment Configuration:', {
+  API_URL,
+  SOCKET_URL,
+  APP_NAME,
+  APP_DESCRIPTION,
+  NODE_ENV: process.env.NODE_ENV
+});
+
+export function AppProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState('splash');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(''); 
+  const [socket, setSocket] = useState(null);
+  const [chats, setChats] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
+  const [config] = useState({
+    API_URL,
+    SOCKET_URL,
+    APP_NAME,
+    APP_DESCRIPTION
+  });
+
+  useEffect(() => {
+    const token = localStorage.getItem('corpslink_token');
+    const savedUser = localStorage.getItem('corpslink_user');
+
+    if (token && savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+        setIsAuthenticated(true);
+        setTimeout(() => {
+          if (currentScreen === 'splash') setCurrentScreen('chats');
+        }, 2000);
+      } catch {
+        localStorage.removeItem('corpslink_token');
+        localStorage.removeItem('corpslink_user');
+      }
+    } else {
+      setTimeout(() => {
+        if (currentScreen === 'splash') setCurrentScreen('login');
+      }, 2000);
+    }
+  }, []);
+
+  const login = async (stateCode, password) => {
+    setLoading(true);
+    setError(''); 
+
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stateCode: stateCode.trim(), password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        localStorage.setItem('corpslink_token', data.token);
+        localStorage.setItem('corpslink_user', JSON.stringify(data.user));
+        setUser(data.user);
+        setIsAuthenticated(true);
+        setCurrentScreen('chats');
+      } else {
+        setError(data.message || 'Invalid credentials'); // ✅
+      }
+    } catch {
+      setError('Cannot connect to server. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (stateCode, password, fullName, batch) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stateCode: stateCode.trim(),
+          password,
+          fullName: fullName.trim(),
+          batch: batch.charAt(0).toUpperCase()
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        localStorage.setItem('corpslink_token', data.token);
+        localStorage.setItem('corpslink_user', JSON.stringify(data.user));
+        setUser(data.user);
+        setIsAuthenticated(true);
+        setCurrentScreen('chats');
+      } else {
+        setError(data.message || 'Registration failed');
+      }
+    } catch {
+      setError('Cannot connect to server. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    localStorage.clear();
+    setUser(null);
+    setIsAuthenticated(false);
+    setCurrentScreen('login');
+    if (socket) socket.disconnect();
+    setChats([]);
+    setContacts([]);
+  };
+
+  const value = {
+    user,
+    isAuthenticated,
+    currentScreen,
+    setCurrentScreen,
+    loading,
+    setLoading,
+    error,     
+    setError,     
+    socket,
+    chats,
+    setChats,
+    contacts,
+    notifications,
+    config,
+    login,
+    register,
+    logout
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+export function useApp() {
+  return useContext(AppContext);
+}
